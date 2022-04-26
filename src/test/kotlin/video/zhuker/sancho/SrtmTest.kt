@@ -7,7 +7,10 @@ import java.io.File
 class SrtmTest {
     @Test
     fun readSrtm() {
-        val file = File("/Users/azhukov/personal/uav_pixel_to_coord/data/elevation/srtm_nasa/N37W123.hgt")
+        val file = File("testdata/N37W123.hgt")
+        if (!file.exists()) {
+            throw Exception("cd testdata/; bzip2 -d N37W123.hgt.bz2")
+        }
         val ef = SrtmElevationFile.loadHgt(file)
         assertEquals(3601, ef.square_side)
         assertEquals(0.0002777777777777778, ef.resolution, 0.00000001)

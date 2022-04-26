@@ -1310,9 +1310,9 @@ class ossimKeywordlist(val config: Map<String, String>) {
     }
 
     companion object {
-        fun hardcodedConfig(): ossimKeywordlist {
+        fun hardcodedConfig(srtmDataPath: String = "/Users/azhukov/personal/uav_pixel_to_coord/data/elevation/srtm_nasa"): ossimKeywordlist {
             val str = """
-                elevation_manager.elevation_source0.connection_string: /Users/azhukov/personal/uav_pixel_to_coord/data/elevation/srtm_nasa
+                elevation_manager.elevation_source0.connection_string: $srtmDataPath
                 elevation_manager.elevation_source0.type: srtm_directory
                 elevation_manager.elevation_source0.enabled: true
                 elevation_manager.elevation_source0.geoid.type: identity
@@ -1325,7 +1325,6 @@ class ossimKeywordlist(val config: Map<String, String>) {
                 .filter { it.size == 2 }
                 .map { it[0].trim() to it[1].trim() }.toMap()
             return ossimKeywordlist(config)
-
         }
     }
 }

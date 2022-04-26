@@ -2,6 +2,7 @@ package video.zhuker.sancho
 
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import java.io.File
 
 class ApplanixTest {
     data class WithArray(val data: DoubleArray) {
@@ -67,7 +68,7 @@ class ApplanixTest {
 
     @Test
     fun testUpdateModel() {
-        val KWL = ossimKeywordlist.hardcodedConfig()
+        val KWL = ossimKeywordlist.hardcodedConfig(File("testdata").absolutePath)
         ossimElevManager.instance().loadState(KWL, "elevation_manager.")
 
         //37.2490921080559 -121.95113440773974 108.8 0 75.4 53.7 0.0 0.0 24.0 0.05693451728060701 0.05693451728060701 1920 1080 960 540
@@ -112,7 +113,7 @@ class ApplanixTest {
 
     @Test
     fun testUpdateModel2() {
-        val KWL = ossimKeywordlist.hardcodedConfig()
+        val KWL = ossimKeywordlist.hardcodedConfig(File("testdata").absolutePath)
         ossimElevManager.instance().loadState(KWL, "elevation_manager.")
 
         //37.2490921080559 -121.95113440773974 108.8 0 75.4 53.7 0.0 0.0 24.0 0.05693451728060701 0.05693451728060701 1920 1080 960 540
