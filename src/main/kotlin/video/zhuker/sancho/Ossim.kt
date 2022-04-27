@@ -70,6 +70,12 @@ class SrtmElevationFile(
     val theNullHeightValue = -32768.0
     fun get_precise_elevation(latitude: Double, longitude: Double): Double {
         val self = this
+        if (!(self.latitude - self.resolution <= latitude || latitude < self.latitude + 1)) {
+            throw IllegalArgumentException()
+        } else if (!(self.longitude <= longitude || longitude < self.longitude + 1 + self.resolution)) {
+            throw IllegalArgumentException()
+        }
+
         val xi = ((longitude - self.longitude) * (self.square_side - 1))
         val yi = ((self.latitude + 1 - latitude) * (self.square_side - 1))
         var x0 = (xi.toInt());
@@ -88,7 +94,8 @@ class SrtmElevationFile(
             x0 > (square_side - 2) ||
             y0 > (square_side - 2)
         ) {
-            return Double.NaN;
+            println("not enough srtm data to interpolate $latitude $longitude")
+            return Double.NaN
         }
         val (row, column) = get_row_and_column(latitude, longitude)
         val p00 = self.get_elevation_from_row_and_column(row, column)
@@ -865,9 +872,9 @@ abstract class ossimElevCellHandler {
     abstract fun getHeightAboveMSL(gpt: ossimGpt): Double
 }
 
-open class ossimElevationDatabase : ossimElevSource() {
+abstract class ossimElevationDatabase : ossimElevSource() {
     private var m_geoid = ossimGeoid()
-    var m_connectionString: String? = null
+    protected var m_connectionString: String? = null
 
     override fun loadState(kwl: ossimKeywordlist, prefix: String): Boolean {
         m_connectionString = kwl.find(prefix, "connection_string");
@@ -877,7 +884,6 @@ open class ossimElevationDatabase : ossimElevSource() {
         }
         return super.loadState(kwl, prefix)
     }
-
 
     fun getOffsetFromEllipsoid(gpt: ossimGpt): Double {
         return m_geoid.offsetFromEllipsoid(gpt)
@@ -891,11 +897,7 @@ open class ossimElevationDatabase : ossimElevSource() {
         return h
     }
 
-    open fun getHeightAboveMSL(gpt: ossimGpt): Double {
-        TODO("Not yet implemented")
-    }
-
-
+    abstract fun getHeightAboveMSL(gpt: ossimGpt): Double
 }
 
 class ossimSrtmHandler : ossimElevCellHandler() {
@@ -925,13 +927,13 @@ abstract class ossimElevationCellDatabase : ossimElevationDatabase() {
 
     private val cache = mutableMapOf<ULong, ossimElevCellHandler>()
     private val maxCacheEntries = 2
-    fun getOrCreateCellHandler(gpt: ossimGpt): ossimElevCellHandler? {
+    private fun getOrCreateCellHandler(gpt: ossimGpt): ossimElevCellHandler? {
         val id = createId(gpt)
         //check if in cache by id
         if (cache.containsKey(id)) {
             return cache[id]
         }
-        val result: ossimElevCellHandler? = createCell(gpt)
+        val result = createCell(gpt)
         if (result != null) {
             cache[id] = result
         }
@@ -986,7 +988,11 @@ abstract class ossimElevationCellDatabase : ossimElevationDatabase() {
     abstract fun createId(pt: ossimGpt): ULong
 }
 
-class ossimSrtmElevationDatabase : ossimElevationCellDatabase() {
+class ossimSrtmElevationDatabase() : ossimElevationCellDatabase() {
+    constructor(srtmDirPath: String) : this() {
+        m_connectionString = srtmDirPath
+    }
+
     override fun createId(pt: ossimGpt): ULong {
         var y: ULong = (ossim.wrap(pt.latd(), -90.0, 90.0) + 90.0).toULong();
         var x: ULong = (ossim.wrap(pt.lond(), -180.0, 180.0) + 180.0).toULong();
