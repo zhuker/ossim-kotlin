@@ -72,9 +72,17 @@ class ApplanixTest {
         ossimElevManager.instance().loadState(KWL, "elevation_manager.")
 
         //37.2490921080559 -121.95113440773974 108.8 0 75.4 53.7 0.0 0.0 24.0 0.05693451728060701 0.05693451728060701 1920 1080 960 540
+        val res = findTarget(makeParams(37.2490921080559, -121.95113440773974))
+        println(res)
+        assertEquals(37.251320410557689, res.lat, 0.0000000000001)
+        assertEquals(-121.94733956444934, res.lon, 0.0000000000001)
+        assertEquals(-0.0000444104488377848, res.hgt, 0.0000000000001)
+    }
+
+    fun makeParams(lat: Double, lon: Double): Params {
         val params = Params(
-            latitude = 37.2490921080559,
-            longitude = -121.95113440773974,
+            latitude = lat,
+            longitude = lon,
             elevation = 108.8,
             roll = 0.0,
             pitch = 75.4,
@@ -89,6 +97,10 @@ class ApplanixTest {
             u = 960.0,
             v = 540.0
         )
+        return params
+    }
+
+    fun findTarget(params: Params, elevManager: ossimElevManager? = null): ossimGpt {
         val model = ossimApplanixEcefModel(
             ossimDrect(ossimDpt(0.0, 0.0), ossimDpt(params.img_width.toDouble(), params.img_height.toDouble())),
             ossimGpt(params.latitude, params.longitude, params.elevation),
@@ -97,18 +109,13 @@ class ApplanixTest {
             params.heading,
             ossimDpt(params.px, params.py),
             params.focal_length,
-            ossimDpt(params.pix_size_x, params.pix_size_y)
+            ossimDpt(params.pix_size_x, params.pix_size_y),
+            elevManager ?: ossimElevManager.instance()
         )
         model.setPrincipalPoint(ossimDpt(params.px, params.py))
         val res = ossimGpt()
-        model.lineSampleToWorld(ossimDpt(params.u, params.v), res);
-        println(res)
-//        lat = {ossim_float64} 37.251320410557689
-//        lon = {ossim_float64} -121.94733956444934
-//        hgt = {ossim_float64} -0.0000444104488377848
-        assertEquals(37.251320410557689, res.lat, 0.0000000000001)
-        assertEquals(-121.94733956444934, res.lon, 0.0000000000001)
-        assertEquals(-0.0000444104488377848, res.hgt, 0.0000000000001)
+        model.lineSampleToWorld(ossimDpt(params.u, params.v), res)
+        return res
     }
 
     @Test
@@ -116,43 +123,46 @@ class ApplanixTest {
         val KWL = ossimKeywordlist.hardcodedConfig(File("testdata").absolutePath)
         ossimElevManager.instance().loadState(KWL, "elevation_manager.")
 
-        //37.2490921080559 -121.95113440773974 108.8 0 75.4 53.7 0.0 0.0 24.0 0.05693451728060701 0.05693451728060701 1920 1080 960 540
-        val params = Params(
-            latitude = 37.2490921080559,
-            longitude = -122.087915,
-            elevation = 108.8,
-            roll = 0.0,
-            pitch = 75.4,
-            heading = 53.7,
-            px = 0.0,
-            py = 0.0,
-            focal_length = 24.0,
-            pix_size_x = 0.05693451728060701,
-            pix_size_y = 0.05693451728060701,
-            img_width = 1920,
-            img_height = 1080,
-            u = 960.0,
-            v = 540.0
-        )
-        val model = ossimApplanixEcefModel(
-            ossimDrect(ossimDpt(0.0, 0.0), ossimDpt(params.img_width.toDouble(), params.img_height.toDouble())),
-            ossimGpt(params.latitude, params.longitude, params.elevation),
-            params.roll,
-            params.pitch,
-            params.heading,
-            ossimDpt(params.px, params.py),
-            params.focal_length,
-            ossimDpt(params.pix_size_x, params.pix_size_y)
-        )
-        model.setPrincipalPoint(ossimDpt(params.px, params.py))
-        val res = ossimGpt()
-        model.lineSampleToWorld(ossimDpt(params.u, params.v), res);
+        val res = findTarget(makeParams(37.2490921080559, -122.087915))
         println(res)
-//        lat = {ossim_float64} 37.251320410557689
-//        lon = {ossim_float64} -121.94733956444934
-//        hgt = {ossim_float64} -0.0000444104488377848
         assertEquals(37.233936863641851, res.lat, 0.0000000000001)
         assertEquals(-122.113713241769318, res.lon, 0.0000000000001)
         assertEquals(849.44254878849074, res.hgt, 0.00000001)
+    }
+
+    @Test
+    fun testUpdateModel2CustomDb() {
+        var customDbCalled = false
+        val dir = File("testdata")
+        val customDb = object : ossimSrtmElevationDatabase() {
+            override fun createCell(gpt: ossimGpt): ossimElevCellHandler? {
+                val h = object : ossimSrtmHandler() {
+                    override fun open(f: File, mmap: Boolean): Boolean {
+                        println("custom open $f")
+                        customDbCalled = true
+                        srtmFile = SrtmElevationFile.loadHgt(f)
+                        return true
+                    }
+                }
+                val filename = createRelativePath(gpt)
+                h.open(File(dir, filename), false)
+                return h
+            }
+        }
+        val mgr = ossimElevManager(listOf(customDb))
+
+        val res = findTarget(makeParams(37.2490921080559, -122.087915), mgr)
+        assertTrue(customDbCalled)
+        println(res)
+        assertEquals(37.233936863641851, res.lat, 0.0000000000001)
+        assertEquals(-122.113713241769318, res.lon, 0.0000000000001)
+        assertEquals(849.44254878849074, res.hgt, 0.00000001)
+    }
+
+    @Test
+    fun testDatabase() {
+        val db = ossimSrtmElevationDatabase("/Users/azhukov/personal/uav_pixel_to_coord/data/elevation/srtm_nasa")
+        val heightAboveMSL = db.getHeightAboveMSL(ossimGpt(37.58967697992352, -121.9995308657649))
+        println(heightAboveMSL)
     }
 }

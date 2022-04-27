@@ -900,9 +900,9 @@ abstract class ossimElevationDatabase : ossimElevSource() {
     abstract fun getHeightAboveMSL(gpt: ossimGpt): Double
 }
 
-class ossimSrtmHandler : ossimElevCellHandler() {
-    var srtmFile: SrtmElevationFile? = null
-    fun open(f: File, mmap: Boolean): Boolean {
+open class ossimSrtmHandler : ossimElevCellHandler() {
+    protected var srtmFile: SrtmElevationFile? = null
+    open fun open(f: File, mmap: Boolean): Boolean {
         println("open $f")
         srtmFile = SrtmElevationFile.loadHgt(f)
         return true
@@ -936,7 +936,7 @@ abstract class ossimElevationCellDatabase : ossimElevationDatabase() {
         return result
     }
 
-    private fun createCell(gpt: ossimGpt): ossimElevCellHandler? {
+    open fun createCell(gpt: ossimGpt): ossimElevCellHandler? {
         val f: File = createFullPath(gpt);
         if (f.exists()) {
             val h = ossimSrtmHandler()
@@ -954,7 +954,7 @@ abstract class ossimElevationCellDatabase : ossimElevationDatabase() {
         return File(m_connectionString, relativeFile)
     }
 
-    private fun createRelativePath(gpt: ossimGpt): String {
+    protected fun createRelativePath(gpt: ossimGpt): String {
         var ilat = floor(gpt.latd()).toInt()
         var file = if (ilat < 0) "S" else "N"
         ilat = abs(ilat)
@@ -979,7 +979,7 @@ abstract class ossimElevationCellDatabase : ossimElevationDatabase() {
     abstract fun createId(pt: ossimGpt): ULong
 }
 
-class ossimSrtmElevationDatabase() : ossimElevationCellDatabase() {
+open class ossimSrtmElevationDatabase() : ossimElevationCellDatabase() {
     constructor(srtmDirPath: String) : this() {
         m_connectionString = srtmDirPath
     }
@@ -1077,12 +1077,16 @@ object ossimKeywordNames {
     val ENABLED_KW = "enabled"
 }
 
-class ossimElevManager : ossimElevSource() {
-    private var m_useStandardPaths: Boolean = false
-    private var m_useGeoidIfNullFlag: Boolean = false
+class ossimElevManager() : ossimElevSource() {
+    private var m_useStandardPaths = false
+    private var m_useGeoidIfNullFlag = false
     private val m_maxRoundRobinSize = 1
     private val m_defaultHeightAboveEllipsoid = Double.NaN
     private val m_elevationOffset = Double.NaN
+
+    constructor(dbs: List<ossimElevationDatabase>) : this() {
+        m_dbRoundRobin.addAll(dbs)
+    }
 
     override fun loadState(kwl: ossimKeywordlist, prefix: String): Boolean {
         if (!super.loadState(kwl, prefix)) {
@@ -1334,7 +1338,8 @@ class ossimApplanixEcefModel(
     private val theHeading: Double,
     principalPoint: ossimDpt,
     private val theFocalLength: Double,
-    pixelSize: ossimDpt
+    pixelSize: ossimDpt,
+    private val elevationManager: ossimElevManager = ossimElevManager.instance()
 ) {
     private val theImageSize = ossimIpt()
     private val thePixelSize = pixelSize.copy()
@@ -1489,7 +1494,7 @@ class ossimApplanixEcefModel(
         } else {
             val ray = ossimEcefRay()
             imagingRay(image_point, ray);
-            ossimElevManager.instance().intersectRay(ray, gpt)
+            elevationManager.intersectRay(ray, gpt)
         }
     }
 
