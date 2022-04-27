@@ -885,7 +885,7 @@ abstract class ossimElevationDatabase : ossimElevSource() {
         return super.loadState(kwl, prefix)
     }
 
-    fun getOffsetFromEllipsoid(gpt: ossimGpt): Double {
+    private fun getOffsetFromEllipsoid(gpt: ossimGpt): Double {
         return m_geoid.offsetFromEllipsoid(gpt)
     }
 
@@ -914,16 +914,7 @@ class ossimSrtmHandler : ossimElevCellHandler() {
 }
 
 abstract class ossimElevationCellDatabase : ossimElevationDatabase() {
-    val m_minOpenCells = 5u
-    val m_maxOpenCells = 10u
-
-    //    m_cacheMapMutex = {std::mutex}
-//    m_cacheMap = {ossimElevationCellDatabase::CellMap} size=0
-    val m_memoryMapCellsFlag = false
-
-    override fun loadState(kwl: ossimKeywordlist, prefix: String): Boolean {
-        return super.loadState(kwl, prefix)
-    }
+    private val m_memoryMapCellsFlag = false
 
     private val cache = mutableMapOf<ULong, ossimElevCellHandler>()
     private val maxCacheEntries = 2
@@ -1079,13 +1070,7 @@ open class ossimSource : ossimConnectableObject() {
     }
 }
 
-open class ossimElevSource : ossimSource() {
-    override fun loadState(kwl: ossimKeywordlist, prefix: String): Boolean {
-        return super.loadState(kwl, prefix)
-    }
-
-
-}
+open class ossimElevSource : ossimSource()
 
 object ossimKeywordNames {
     val TYPE_KW = "type"
@@ -1128,11 +1113,11 @@ class ossimElevManager : ossimElevSource() {
         m_dbRoundRobin.add(database)
     }
 
-    fun getNextElevDbList(): List<ossimElevationDatabase> {
+    private fun getNextElevDbList(): List<ossimElevationDatabase> {
         return m_dbRoundRobin
     }
 
-    fun getHeightAboveEllipsoid(gpt: ossimGpt): Double {
+    private fun getHeightAboveEllipsoid(gpt: ossimGpt): Double {
         var result = Double.NaN
         if (!isSourceEnabled())
             return result;
@@ -1164,12 +1149,12 @@ class ossimElevManager : ossimElevSource() {
         val CONVERGENCE_THRESHOLD = 0.001; // meters
         val MAX_NUM_ITERATIONS = 50;
 
-        var h_ellips: Double = 0.0; // height above ellipsoid
-        var intersected: Boolean = false;
-        var prev_intersect_pt = ossimEcefPoint(ray.origin());
-        var new_intersect_pt = ossimEcefPoint();
+        var h_ellips = 0.0; // height above ellipsoid
+        var intersected = false;
+        val prev_intersect_pt = ossimEcefPoint(ray.origin());
+        val new_intersect_pt = ossimEcefPoint();
         var distance = 0.0;
-        var done: Boolean = false;
+        var done = false;
         var iteration_count = 0;
         if (ray.hasNans()) {
             gpt.makeNan();
@@ -1381,7 +1366,7 @@ class ossimApplanixEcefModel(
             TODO("Not yet implemented")
         }
         var centerImagePoint: ossimDpt = theRefImgPt
-        var quarterSize = if (!theImageSize.hasNans()) {
+        val quarterSize = if (!theImageSize.hasNans()) {
             ossimDpt(theImageSize.x / 4.0, theImageSize.y / 4.0)
         } else if (!theImageClipRect.hasNans()) {
             val w: Float = theImageClipRect.width().toFloat()
@@ -1402,10 +1387,10 @@ class ossimApplanixEcefModel(
             val rightDpt = ossimDpt(centerImagePoint.x + quarterSize.y, centerImagePoint.y);// (endSamp, midLine);
             val topDpt = ossimDpt(centerImagePoint.x, centerImagePoint.y - quarterSize.y);//   (midSamp, 0.0);
             val bottomDpt = ossimDpt(centerImagePoint.x, centerImagePoint.y + quarterSize.y);//(midSamp, endLine);
-            var leftGpt = ossimGpt()
-            var rightGpt = ossimGpt()
-            var topGpt = ossimGpt()
-            var bottomGpt = ossimGpt()
+            val leftGpt = ossimGpt()
+            val rightGpt = ossimGpt()
+            val topGpt = ossimGpt()
+            val bottomGpt = ossimGpt()
 
             //---
             // Left point.
