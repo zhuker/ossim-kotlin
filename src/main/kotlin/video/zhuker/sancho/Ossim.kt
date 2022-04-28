@@ -18,9 +18,7 @@ import kotlin.math.*
 private fun SimpleMatrix.Nrows(): Int = this.numRows()
 private fun SimpleMatrix.Ncols(): Int = this.numCols()
 fun SimpleMatrix.i(): SimpleMatrix = this.invert()
-operator fun SimpleMatrix.times(other: SimpleMatrix): SimpleMatrix {
-    return this.mult(other)
-}
+operator fun SimpleMatrix.times(other: SimpleMatrix): SimpleMatrix = this.mult(other)
 
 private val ByteBuffer.size: Int get() = this.remaining()
 fun <T> List<T>.resize(newsize: Int, ctor: () -> T): List<T> {
@@ -57,38 +55,28 @@ class SrtmElevationFile(
     val resolution: Double
 ) {
     fun get_elevation(latitude: Double, longitude: Double): Double {
-        val self = this
-        if (!(self.latitude - self.resolution <= latitude || latitude < self.latitude + 1)) {
-            throw IllegalArgumentException()
-        } else if (!(self.longitude <= longitude || longitude < self.longitude + 1 + self.resolution)) {
-            throw IllegalArgumentException()
-        }
-        val (row, column) = self.get_row_and_column(latitude, longitude)
-        return self.get_elevation_from_row_and_column(row, column)
+        checkArgs(latitude, longitude)
+        val (row, column) = this.get_row_and_column(latitude, longitude)
+        return this.get_elevation_from_row_and_column(row, column)
     }
 
     val theNullHeightValue = -32768.0
     fun get_precise_elevation(latitude: Double, longitude: Double): Double {
-        val self = this
-        if (!(self.latitude - self.resolution <= latitude || latitude < self.latitude + 1)) {
-            throw IllegalArgumentException()
-        } else if (!(self.longitude <= longitude || longitude < self.longitude + 1 + self.resolution)) {
-            throw IllegalArgumentException()
-        }
+        checkArgs(latitude, longitude)
 
-        val xi = ((longitude - self.longitude) * (self.square_side - 1))
-        val yi = ((self.latitude + 1 - latitude) * (self.square_side - 1))
-        var x0 = (xi.toInt());
-        var y0 = (yi.toInt());
+        val xi = ((longitude - this.longitude) * (this.square_side - 1))
+        val yi = ((this.latitude + 1 - latitude) * (this.square_side - 1))
+        var x0 = (xi.toInt())
+        var y0 = (yi.toInt())
 
         if (x0 == (square_side - 1)) {
-            --x0; // Move over one post.
+            --x0 // Move over one post.
         }
 
         // Check for top edge.
         //    if (gpt.lat == theGroundRect.ul().lat)
         if (y0 == (square_side - 1)) {
-            --y0; // Move down one post.
+            --y0 // Move down one post.
         }
         if (xi < 0 || yi < 0 ||
             x0 > (square_side - 2) ||
@@ -98,10 +86,10 @@ class SrtmElevationFile(
             return Double.NaN
         }
         val (row, column) = get_row_and_column(latitude, longitude)
-        val p00 = self.get_elevation_from_row_and_column(row, column)
-        val p01 = self.get_elevation_from_row_and_column(row, column + 1)
-        val p10 = self.get_elevation_from_row_and_column(row + 1, column)
-        val p11 = self.get_elevation_from_row_and_column(row + 1, column + 1)
+        val p00 = this.get_elevation_from_row_and_column(row, column)
+        val p01 = this.get_elevation_from_row_and_column(row, column + 1)
+        val p10 = this.get_elevation_from_row_and_column(row + 1, column)
+        val p11 = this.get_elevation_from_row_and_column(row + 1, column + 1)
 
         val xt0 = xi - x0
         val yt0 = yi - y0
@@ -113,21 +101,28 @@ class SrtmElevationFile(
         var w10 = xt1 * yt0
         var w11 = xt0 * yt0
         if (p00 == theNullHeightValue)
-            w00 = 0.0;
+            w00 = 0.0
         if (p01 == theNullHeightValue)
-            w01 = 0.0;
+            w01 = 0.0
         if (p10 == theNullHeightValue)
-            w10 = 0.0;
+            w10 = 0.0
         if (p11 == theNullHeightValue)
-            w11 = 0.0;
+            w11 = 0.0
         val sum_weights = w00 + w01 + w10 + w11
         if (abs(sum_weights) > 0.0) {
-            return (p00 * w00 + p01 * w01 + p10 * w10 + p11 * w11) / sum_weights;
+            return (p00 * w00 + p01 * w01 + p10 * w10 + p11 * w11) / sum_weights
         }
 
         return Double.NaN
     }
 
+    private fun checkArgs(latitude: Double, longitude: Double) {
+        if (!(this.latitude - this.resolution <= latitude || latitude < this.latitude + 1)) {
+            throw IllegalArgumentException()
+        } else if (!(this.longitude <= longitude || longitude < this.longitude + 1 + this.resolution)) {
+            throw IllegalArgumentException()
+        }
+    }
 
     private fun get_elevation_from_row_and_column(row: Int, column: Int): Double {
         val self = this
@@ -140,8 +135,9 @@ class SrtmElevationFile(
 
     private fun get_row_and_column(latitude: Double, longitude: Double): Pair<Int, Int> {
         val self = this
-        return floor((self.latitude + 1 - latitude) * (self.square_side - 1)).toInt() to
-                floor((longitude - self.longitude) * (self.square_side - 1)).toInt()
+        val row = floor((self.latitude + 1 - latitude) * (self.square_side - 1)).toInt()
+        val col = floor((longitude - self.longitude) * (self.square_side - 1)).toInt()
+        return row to col
     }
 
     companion object {
@@ -171,13 +167,9 @@ class SrtmElevationFile(
 
 class ossim {
     companion object {
-        fun sind(x: Double): Double {
-            return sin(x * RAD_PER_DEG)
-        }
+        fun sind(x: Double): Double = sin(x * RAD_PER_DEG)
 
-        fun cosd(x: Double): Double {
-            return cos(x * RAD_PER_DEG)
-        }
+        fun cosd(x: Double): Double = cos(x * RAD_PER_DEG)
 
         fun wrap(x: Double, a: Double, b: Double): Double {
             if (a == b && !x.isNaN()) return a
@@ -189,9 +181,7 @@ class ossim {
 
 class std {
     companion object {
-        fun abs(x: Double): Double {
-            return kotlin.math.abs(x)
-        }
+        fun abs(x: Double): Double = kotlin.math.abs(x)
 
         fun fmod(a: Double, b: Double): Double {
             val result = floor(a / b).toInt()
@@ -208,39 +198,15 @@ class Constants {
         const val OSSIM_INT_NAN: Int = 0x80000000.toInt()
         val FLT_EPSILON = Math.ulp(1.0f)        //1.1920929E-7
 
-
-        fun fabs(x: Double): Double {
-            return abs(x)
-        }
-
+        fun fabs(x: Double): Double = abs(x)
     }
 }
-
-data class Params(
-    val latitude: Double,
-    val longitude: Double,
-    val elevation: Double,
-    val roll: Double,
-    val pitch: Double,
-    val heading: Double,
-    val px: Double,
-    val py: Double,
-    val focal_length: Double,
-    val pix_size_x: Double,
-    val pix_size_y: Double,
-    val img_width: Int,
-    val img_height: Int,
-    val u: Double,
-    val v: Double
-)
 
 data class ossimDpt(var x: Double = 0.0, var y: Double = 0.0) {
     constructor(pt: ossimGpt) : this(pt.lon, pt.lat)
 
     fun hasNans(): Boolean = x.isNaN() || y.isNaN()
-    operator fun minus(p: ossimDpt): ossimDpt {
-        return ossimDpt(x - p.x, y - p.y)
-    }
+    operator fun minus(p: ossimDpt): ossimDpt = ossimDpt(x - p.x, y - p.y)
 
     fun assign(other: ossimDpt) {
         x = other.x
@@ -257,10 +223,10 @@ class ossimDrect(
     lr_corner: ossimDpt,
     val mode: ossimCoordSysOrientMode = ossimCoordSysOrientMode.OSSIM_LEFT_HANDED
 ) {
-    private val theUlCorner: ossimDpt = ul_corner.copy()
-    private val theUrCorner: ossimDpt = ossimDpt(lr_corner.x, ul_corner.y)
-    private val theLrCorner: ossimDpt = lr_corner.copy()
-    private val theLlCorner: ossimDpt = ossimDpt(ul_corner.x, lr_corner.y)
+    private val theUlCorner = ul_corner.copy()
+    private val theUrCorner = ossimDpt(lr_corner.x, ul_corner.y)
+    private val theLrCorner = lr_corner.copy()
+    private val theLlCorner = ossimDpt(ul_corner.x, lr_corner.y)
 
     fun ul(): ossimDpt = theUlCorner
     fun ur(): ossimDpt = theUrCorner
@@ -270,7 +236,7 @@ class ossimDrect(
     fun midPoint(): ossimDpt {
         return ossimDpt(
             (ul().x + ur().x + ll().x + lr().x) * .25, (ul().y + ur().y + ll().y + lr().y) * .25
-        );
+        )
     }
 
     fun hasNans(): Boolean {
@@ -280,25 +246,21 @@ class ossimDrect(
                 theUrCorner.hasNans()
     }
 
-    fun width(): Double {
-        return fabs(theLrCorner.x - theLlCorner.x) + 1.0;
-    }
+    fun width(): Double = fabs(theLrCorner.x - theLlCorner.x) + 1.0
 
-    fun height(): Double {
-        return fabs(theLlCorner.y - theUlCorner.y) + 1.0;
-    }
+    fun height(): Double = fabs(theLlCorner.y - theUlCorner.y) + 1.0
 }
 
 class ossimEllipsoid(
-    val theName: String,
-    val theCode: String,
-    val theEpsgCode: UInt,
-    val theA: Double,
-    val theB: Double,
-    val theFlattening: Double,
-    val theA_squared: Double,
-    val theB_squared: Double,
-    val theEccentricitySquared: Double
+    private val theName: String,
+    private val theCode: String,
+    private val theEpsgCode: UInt,
+    private val theA: Double,
+    private val theB: Double,
+    private val theFlattening: Double,
+    private val theA_squared: Double,
+    private val theB_squared: Double,
+    private val theEccentricitySquared: Double
 ) {
     fun geodeticRadius(lat: Double): Double {
         val cos_lat = cosd(lat)
@@ -311,62 +273,60 @@ class ossimEllipsoid(
     }
 
     fun latLonHeightToXYZ(lat: Double, lon: Double, height: Double, xyz: ossimColumnVector3d) {
-        val sin_latitude = sind(lat);
-        val cos_latitude = cosd(lat);
-        val N = theA / sqrt(1.0 - theEccentricitySquared * sin_latitude * sin_latitude);
-        xyz.x = (N + height) * cos_latitude * cosd(lon);
-        xyz.y = (N + height) * cos_latitude * sind(lon);
-        xyz.z = (N * (1 - theEccentricitySquared) + height) * sin_latitude;
+        val sin_latitude = sind(lat)
+        val cos_latitude = cosd(lat)
+        val N = theA / sqrt(1.0 - theEccentricitySquared * sin_latitude * sin_latitude)
+        xyz.x = (N + height) * cos_latitude * cosd(lon)
+        xyz.y = (N + height) * cos_latitude * sind(lon)
+        xyz.z = (N * (1 - theEccentricitySquared) + height) * sin_latitude
     }
 
     fun XYZToLatLonHeight(x: Double, y: Double, z: Double, gpt: ossimGpt) {
-        val tol = 1e-15;
-        val d = sqrt(x * x + y * y);
-        val MAX_ITER = 10;
+        val tol = 1e-15
+        val d = sqrt(x * x + y * y)
+        val MAX_ITER = 10
 
-        val a2 = theA * theA;
-        val b2 = theB * theB;
-        val pa2 = d * d * a2;
-        val qb2 = z * z * b2;
-        val ae2 = a2 * eccentricitySquared();
-        val ae4 = ae2 * ae2;
+        val a2 = theA * theA
+        val b2 = theB * theB
+        val pa2 = d * d * a2
+        val qb2 = z * z * b2
+        val ae2 = a2 * eccentricitySquared()
+        val ae4 = ae2 * ae2
 
-        val c3 = -(ae4 / 2 + pa2 + qb2);          // s^2
-        val c4 = ae2 * (pa2 - qb2);               // s^1
-        val c5 = ae4 / 4 * (ae4 / 4 - pa2 - qb2);   // s^0
+        val c3 = -(ae4 / 2 + pa2 + qb2)          // s^2
+        val c4 = ae2 * (pa2 - qb2)               // s^1
+        val c5 = ae4 / 4 * (ae4 / 4 - pa2 - qb2)   // s^0
 
         var s0 = 0.5 * (a2 + b2) * hypot(d / theA, z / theB)
         for (iterIdx in 0 until MAX_ITER) {
-            val pol = c5 + s0 * (c4 + s0 * (c3 + s0 * s0));
-            val der = c4 + s0 * (2 * c3 + 4 * s0 * s0);
-            val ds = -pol / der;
-            s0 += ds;
+            val pol = c5 + s0 * (c4 + s0 * (c3 + s0 * s0))
+            val der = c4 + s0 * (2 * c3 + 4 * s0 * s0)
+            val ds = -pol / der
+            s0 += ds
             if (fabs(ds) < tol * s0) {
-                val t = s0 - 0.5 * (a2 + b2);
-                val x_ell = d / (1.0 + t / a2);
-                val y_ell = z / (1.0 + t / b2);
+                val t = s0 - 0.5 * (a2 + b2)
+                val x_ell = d / (1.0 + t / a2)
+                val y_ell = z / (1.0 + t / b2)
 
-                gpt.hgt = (d - x_ell) * x_ell / a2 + (z - y_ell) * y_ell / b2;
-                gpt.hgt /= hypot(x_ell / a2, y_ell / b2);
+                gpt.hgt = (d - x_ell) * x_ell / a2 + (z - y_ell) * y_ell / b2
+                gpt.hgt /= hypot(x_ell / a2, y_ell / b2)
 
-                gpt.lat = atan2(y_ell / b2, x_ell / a2) * DEG_PER_RAD;
-                gpt.lon = atan2(y, x) * DEG_PER_RAD;
+                gpt.lat = atan2(y_ell / b2, x_ell / a2) * DEG_PER_RAD
+                gpt.lon = atan2(y, x) * DEG_PER_RAD
 
-                return;
+                return
             }
         }
     }
 
-    private fun eccentricitySquared(): Double {
-        return theEccentricitySquared
-    }
+    private fun eccentricitySquared(): Double = theEccentricitySquared
 
     fun nearestIntersection(ray: ossimEcefRay, offset: Double, rtnPt: ossimEcefPoint): Boolean {
-        var success = false;
+        var success = false
 
-        val eccSqComp = 1.0 - theEccentricitySquared;
-        val CONVERGENCE_THRESHOLD = 0.0001;
-        val MAX_NUM_ITERATIONS = 10;
+        val eccSqComp = 1.0 - theEccentricitySquared
+        val CONVERGENCE_THRESHOLD = 0.0001
+        val MAX_NUM_ITERATIONS = 10
         val start = ray.origin()
         val direction = ray.direction()
 
@@ -378,14 +338,14 @@ class ossimEllipsoid(
         val direction_y: Double = direction.y()
         val direction_z: Double = direction.z()
 
-        var rayGpt = ossimGpt.fromEcefPoint(start);
+        var rayGpt = ossimGpt.fromEcefPoint(start)
         var iterations = 0
         var done = false
         do {
-            val rayLat = rayGpt.latd();
-            val raySinLat = ossim.sind(rayLat);
-            val rayScale = 1.0 / sqrt(1.0 - theEccentricitySquared * raySinLat * raySinLat);
-            val rayN = theA * rayScale;
+            val rayLat = rayGpt.latd()
+            val raySinLat = sind(rayLat)
+            val rayScale = 1.0 / sqrt(1.0 - theEccentricitySquared * raySinLat * raySinLat)
+            val rayN = theA * rayScale
             val A_offset: Double = rayN + offset
             val B_offset: Double = rayN * eccSqComp + offset
             val A_offset_inv = 1.0 / A_offset
@@ -438,14 +398,14 @@ class ossimEllipsoid(
             // Get estimated intersection point.
             // Get estimated intersection point.
             val rayEcef = ray.extend(tEstimate)
-            rayGpt = ossimGpt.fromEcefPoint(rayEcef);
+            rayGpt = ossimGpt.fromEcefPoint(rayEcef)
             val offsetError = fabs(rayGpt.height() - offset)
             if (offsetError < CONVERGENCE_THRESHOLD) {
-                done = true;
-                success = true;
-                rtnPt.assign(rayEcef);
+                done = true
+                success = true
+                rtnPt.assign(rayEcef)
             }
-        } while ((!done) && (iterations++ < MAX_NUM_ITERATIONS));
+        } while ((!done) && (iterations++ < MAX_NUM_ITERATIONS))
         return success
     }
 }
@@ -470,9 +430,7 @@ interface ossimDatum {
 
 class ossimWgs84Datum : ossimDatum {
     private val theEllipsoid: ossimEllipsoid = wgs84Ellipsoid()
-    override fun ellipsoid(): ossimEllipsoid {
-        return theEllipsoid
-    }
+    override fun ellipsoid(): ossimEllipsoid = theEllipsoid
 }
 
 
@@ -489,7 +447,7 @@ data class ossimGpt(
             } else {
                 val gpt = ossimGpt(theDatum = datum)
                 ossimWgs84Datum().ellipsoid().XYZToLatLonHeight(ecef_point.x(), ecef_point.y(), ecef_point.z(), gpt)
-                return gpt;
+                return gpt
             }
         }
     }
@@ -543,8 +501,8 @@ data class ossimGpt(
 }
 
 operator fun Double.times(rhs: ossimColumnVector3d): ossimColumnVector3d {
-    val data = rhs;
-    val scalar = this;
+    val data = rhs
+    val scalar = this
     return ossimColumnVector3d(
         data[0] * scalar,
         data[1] * scalar,
@@ -561,7 +519,7 @@ data class ossimColumnVector3d(var x: Double = 0.0, var y: Double = 0.0, var z: 
             data[0] - rhs[0],
             data[1] - rhs[1],
             data[2] - rhs[2]
-        );
+        )
     }
 
     operator fun plus(rhs: ossimColumnVector3d): ossimColumnVector3d {
@@ -570,7 +528,7 @@ data class ossimColumnVector3d(var x: Double = 0.0, var y: Double = 0.0, var z: 
             data[0] + rhs[0],
             data[1] + rhs[1],
             data[2] + rhs[2]
-        );
+        )
     }
 
     operator fun get(idx: Int): Double {
@@ -604,7 +562,7 @@ data class ossimColumnVector3d(var x: Double = 0.0, var y: Double = 0.0, var z: 
             data[0] * data[0] +
                     data[1] * data[1] +
                     data[2] * data[2]
-        );
+        )
     }
 
     operator fun times(scalar: Double): ossimColumnVector3d {
@@ -621,7 +579,7 @@ data class ossimColumnVector3d(var x: Double = 0.0, var y: Double = 0.0, var z: 
             data[0] / scalar,
             data[1] / scalar,
             data[2] / scalar
-        );
+        )
     }
 }
 
@@ -652,7 +610,7 @@ data class ossimEcefPoint(var theData: ossimColumnVector3d = ossimColumnVector3d
         if (!gpt.isHgtNan()) {
             gpt.datum().ellipsoid().latLonHeightToXYZ(
                 gpt.latd(), gpt.lond(), gpt.height(), theData
-            );
+            )
 
         } else {
             TODO("not implemented")
@@ -662,10 +620,8 @@ data class ossimEcefPoint(var theData: ossimColumnVector3d = ossimColumnVector3d
     constructor(other: ossimEcefPoint) : this(other.theData.copy())
 }
 
-class ossimMeanRadialLensDistortion() {
-    fun valid(): Boolean {
-        return false
-    }
+class ossimMeanRadialLensDistortion {
+    fun valid(): Boolean = false
 }
 
 data class AdjParam(
@@ -676,33 +632,33 @@ data class AdjParam(
     var theCenter: Double = 0.0
 ) {
     fun computeOffset(): Double {
-        return theCenter + theSigma * theParameter;
+        return theCenter + theSigma * theParameter
     }
 }
 
 class ossimLsrSpace(origin: ossimGpt, y_azimuth: Double) {
-    var theLsrToEcefRotMatrix: SimpleMatrix = SimpleMatrix.diag(0.0)
-    val theOrigin = ossimEcefPoint(origin)
+    private var theLsrToEcefRotMatrix: SimpleMatrix = SimpleMatrix.diag(0.0)
+    private val theOrigin = ossimEcefPoint(origin)
 
     init {
-        val sin_lat = ossim.sind(origin.lat);
-        val cos_lat = ossim.cosd(origin.lat);
-        val sin_lon = ossim.sind(origin.lon);
-        val cos_lon = ossim.cosd(origin.lon);
+        val sin_lat = sind(origin.lat)
+        val cos_lat = cosd(origin.lat)
+        val sin_lon = sind(origin.lon)
+        val cos_lon = cosd(origin.lon)
         val E = ossimColumnVector3d(
             -sin_lon,
             cos_lon,
             0.0
-        );
+        )
         val N = ossimColumnVector3d(
             -sin_lat * cos_lon,
             -sin_lat * sin_lon,
             cos_lat
-        );
-        val U = ossimColumnVector3d(E.cross(N));
+        )
+        val U = ossimColumnVector3d(E.cross(N))
         if (std.abs(y_azimuth) > FLT_EPSILON) {
-            val cos_azim = ossim.cosd(y_azimuth);
-            val sin_azim = ossim.sind(y_azimuth);
+            val cos_azim = cosd(y_azimuth)
+            val sin_azim = sind(y_azimuth)
             val X = cos_azim * E - sin_azim * N
             val Y = sin_azim * E + cos_azim * N
             val Z = X.cross(Y)
@@ -716,13 +672,11 @@ class ossimLsrSpace(origin: ossimGpt, y_azimuth: Double) {
                 E[0], N[0], U[0],
                 E[1], N[1], U[1],
                 E[2], N[2], U[2]
-            );
+            )
         }
     }
 
-    fun lsrToEcefRotMatrix(): SimpleMatrix {
-        return theLsrToEcefRotMatrix
-    }
+    fun lsrToEcefRotMatrix(): SimpleMatrix = theLsrToEcefRotMatrix
 }
 
 class ossimMatrix3x3 {
@@ -754,22 +708,22 @@ class ossimMatrix4x4(m: SimpleMatrix) {
         if (m.numRows() == 4 && m.numCols() == 4) {
             theData = m
         } else if (m.numCols() == 3 && m.numCols() == 3) {
-            theData[0, 0] = m[0, 0];
-            theData[0, 1] = m[0, 1];
-            theData[0, 2] = m[0, 2];
-            theData[0, 3] = 0.0;
-            theData[1, 0] = m[1, 0];
-            theData[1, 1] = m[1, 1];
-            theData[1, 2] = m[1, 2];
-            theData[1, 3] = 0.0;
-            theData[2, 0] = m[2, 0];
-            theData[2, 1] = m[2, 1];
-            theData[2, 2] = m[2, 2];
-            theData[2, 3] = 0.0;
-            theData[3, 0] = 0.0;
-            theData[3, 1] = 0.0;
-            theData[3, 2] = 0.0;
-            theData[3, 3] = 1.0;
+            theData[0, 0] = m[0, 0]
+            theData[0, 1] = m[0, 1]
+            theData[0, 2] = m[0, 2]
+            theData[0, 3] = 0.0
+            theData[1, 0] = m[1, 0]
+            theData[1, 1] = m[1, 1]
+            theData[1, 2] = m[1, 2]
+            theData[1, 3] = 0.0
+            theData[2, 0] = m[2, 0]
+            theData[2, 1] = m[2, 1]
+            theData[2, 2] = m[2, 2]
+            theData[2, 3] = 0.0
+            theData[3, 0] = 0.0
+            theData[3, 1] = 0.0
+            theData[3, 2] = 0.0
+            theData[3, 3] = 1.0
         } else {
             theData = SimpleMatrix.diag(1.0, 1.0, 1.0, 1.0)
         }
@@ -831,13 +785,13 @@ operator fun SimpleMatrix.times(rhs: ossimColumnVector3d): ossimColumnVector3d {
             (lhs[0, 0] * rhs[0] + lhs[0, 1] * rhs[1] + lhs[0, 2] * rhs[2]),
             (lhs[1, 0] * rhs[0] + lhs[1, 1] * rhs[1] + lhs[1, 2] * rhs[2]),
             (lhs[2, 0] * rhs[0] + lhs[2, 1] * rhs[1] + lhs[2, 2] * rhs[2])
-        );
+        )
     } else if ((lhs.Ncols() == 4) && (lhs.Nrows() == 4)) {
         return ossimColumnVector3d(
             (lhs[0, 0] * rhs[0] + lhs[0, 1] * rhs[1] + lhs[0, 2] * rhs[2] + lhs[0, 3]),
             (lhs[1, 0] * rhs[0] + lhs[1, 1] * rhs[1] + lhs[1, 2] * rhs[2] + lhs[1, 3]),
             (lhs[2, 0] * rhs[0] + lhs[2, 1] * rhs[1] + lhs[2, 2] * rhs[2] + lhs[2, 3])
-        );
+        )
     }
     TODO("Multiplying a 3 row column vector by an invalid matrix")
 }
@@ -846,12 +800,10 @@ enum class ossimVertexOrdering {
     OSSIM_VERTEX_ORDER_UNKNOWN,
     OSSIM_CLOCKWISE_ORDER,
     OSSIM_COUNTERCLOCKWISE_ORDER
-};
+}
 
 data class ossimGeoid(val dummy: Double = 0.0) {
-    fun offsetFromEllipsoid(gpt: ossimGpt): Double {
-        return 0.0
-    }
+    fun offsetFromEllipsoid(gpt: ossimGpt): Double = 0.0
 }
 
 class ossimGeoidManager {
@@ -865,9 +817,7 @@ class ossimGeoidManager {
 
     companion object {
         private val m_instance = ossimGeoidManager()
-        fun instance(): ossimGeoidManager {
-            return m_instance;
-        }
+        fun instance(): ossimGeoidManager = m_instance
     }
 }
 
@@ -880,10 +830,10 @@ abstract class ossimElevationDatabase : ossimElevSource() {
     protected var m_connectionString: String? = null
 
     override fun loadState(kwl: ossimKeywordlist, prefix: String): Boolean {
-        m_connectionString = kwl.find(prefix, "connection_string");
+        m_connectionString = kwl.find(prefix, "connection_string")
         val value = kwl.find(prefix, "geoid.type")
         if (value != null) {
-            m_geoid = ossimGeoidManager.instance().findGeoidByShortName(value);
+            m_geoid = ossimGeoidManager.instance().findGeoidByShortName(value)
         }
         return super.loadState(kwl, prefix)
     }
@@ -895,7 +845,7 @@ abstract class ossimElevationDatabase : ossimElevSource() {
     fun getHeightAboveEllipsoid(gpt: ossimGpt): Double {
         var h = getHeightAboveMSL(gpt)
         if (!h.isNaN()) {
-            h += getOffsetFromEllipsoid(gpt);
+            h += getOffsetFromEllipsoid(gpt)
         }
         return h
     }
@@ -940,7 +890,7 @@ abstract class ossimElevationCellDatabase : ossimElevationDatabase() {
     }
 
     open fun createCell(gpt: ossimGpt): ossimElevCellHandler? {
-        val f: File = createFullPath(gpt);
+        val f: File = createFullPath(gpt)
         if (f.exists()) {
             val h = ossimSrtmHandler()
             if (h.open(f, m_memoryMapCellsFlag)) {
@@ -953,7 +903,7 @@ abstract class ossimElevationCellDatabase : ossimElevationDatabase() {
     }
 
     private fun createFullPath(gpt: ossimGpt): File {
-        val relativeFile = createRelativePath(gpt);
+        val relativeFile = createRelativePath(gpt)
         return File(m_connectionString, relativeFile)
     }
 
@@ -988,11 +938,11 @@ open class ossimSrtmElevationDatabase() : ossimElevationCellDatabase() {
     }
 
     override fun createId(pt: ossimGpt): ULong {
-        var y: ULong = (ossim.wrap(pt.latd(), -90.0, 90.0) + 90.0).toULong();
-        var x: ULong = (ossim.wrap(pt.lond(), -180.0, 180.0) + 180.0).toULong();
+        var y: ULong = (ossim.wrap(pt.latd(), -90.0, 90.0) + 90.0).toULong()
+        var x: ULong = (ossim.wrap(pt.lond(), -180.0, 180.0) + 180.0).toULong()
         x = if (x == 360UL) 359UL else x
         y = if (y == 180UL) 179UL else y
-        return (y * 360UL + x);
+        return (y * 360UL + x)
     }
 }
 
@@ -1017,9 +967,7 @@ class ossimElevationDatabaseFactory {
 
     companion object {
         private val m_instance = ossimElevationDatabaseFactory()
-        fun instance(): ossimElevationDatabaseFactory {
-            return m_instance
-        }
+        fun instance(): ossimElevationDatabaseFactory = m_instance
     }
 }
 
@@ -1047,29 +995,24 @@ class ossimElevationDatabaseRegistry {
     }
 
     fun createDatabase(kwl: ossimKeywordlist, prefix: String): ossimElevationDatabase {
-        return m_factoryList.first().createDatabase(kwl, prefix);
+        return m_factoryList.first().createDatabase(kwl, prefix)
     }
 }
 
-open class ossimConnectableObject {
-    open fun loadState(kwl: ossimKeywordlist, prefix: String): Boolean {
-        return true
-    }
-
+abstract class ossimConnectableObject {
+    abstract fun loadState(kwl: ossimKeywordlist, prefix: String): Boolean
 }
 
 open class ossimSource : ossimConnectableObject() {
     var theEnabledFlag: Boolean = true
-    fun isSourceEnabled(): Boolean {
-        return theEnabledFlag;
-    }
+    fun isSourceEnabled(): Boolean = theEnabledFlag
 
     override fun loadState(kwl: ossimKeywordlist, prefix: String): Boolean {
         val lookup: String? = kwl.find(prefix, ossimKeywordNames.ENABLED_KW)
         if (lookup != null) {
             theEnabledFlag = lookup.toBoolean()
         }
-        return super.loadState(kwl, prefix)
+        return true
     }
 }
 
@@ -1095,13 +1038,13 @@ class ossimElevManager() : ossimElevSource() {
         if (!super.loadState(kwl, prefix)) {
             return false
         }
-        val copyPrefix = prefix;
-        val elevationOffset = kwl.find(copyPrefix, "elevation_offset");
-        val defaultHeightAboveEllipsoid = kwl.find(copyPrefix, "default_height_above_ellipsoid");
-        val elevRndRbnSize = kwl.find(copyPrefix, "threads");
+        val copyPrefix = prefix
+        val elevationOffset = kwl.find(copyPrefix, "elevation_offset")
+        val defaultHeightAboveEllipsoid = kwl.find(copyPrefix, "default_height_above_ellipsoid")
+        val elevRndRbnSize = kwl.find(copyPrefix, "threads")
 
-        m_useGeoidIfNullFlag = kwl.getBoolKeywordValue("use_geoid_if_null", copyPrefix);
-        m_useStandardPaths = kwl.getBoolKeywordValue("use_standard_elev_paths", copyPrefix);
+        m_useGeoidIfNullFlag = kwl.getBoolKeywordValue("use_geoid_if_null", copyPrefix)
+        m_useStandardPaths = kwl.getBoolKeywordValue("use_standard_elev_paths", copyPrefix)
 
         val regExpression = "^(" + copyPrefix + "elevation_source[0-9]+.)"
         val keys: List<String> = kwl.getSubstringKeyList(regExpression)
@@ -1127,7 +1070,7 @@ class ossimElevManager() : ossimElevSource() {
     private fun getHeightAboveEllipsoid(gpt: ossimGpt): Double {
         var result = Double.NaN
         if (!isSourceEnabled())
-            return result;
+            return result
         val elevDbList = getNextElevDbList()
         for (elevDb in elevDbList) {
             result = elevDb.getHeightAboveEllipsoid(gpt)
@@ -1153,25 +1096,25 @@ class ossimElevManager() : ossimElevSource() {
 
     fun intersectRay(ray: ossimEcefRay, gpt: ossimGpt, defaultElevValue: Double = 0.0): Boolean {
 
-        val CONVERGENCE_THRESHOLD = 0.001; // meters
-        val MAX_NUM_ITERATIONS = 50;
+        val CONVERGENCE_THRESHOLD = 0.001 // meters
+        val MAX_NUM_ITERATIONS = 50
 
-        var h_ellips = 0.0; // height above ellipsoid
-        var intersected = false;
-        val prev_intersect_pt = ossimEcefPoint(ray.origin());
-        val new_intersect_pt = ossimEcefPoint();
-        var distance = 0.0;
-        var done = false;
-        var iteration_count = 0;
+        var h_ellips = 0.0 // height above ellipsoid
+        var intersected = false
+        val prev_intersect_pt = ossimEcefPoint(ray.origin())
+        val new_intersect_pt = ossimEcefPoint()
+        var distance = 0.0
+        var done = false
+        var iteration_count = 0
         if (ray.hasNans()) {
-            gpt.makeNan();
-            return false;
+            gpt.makeNan()
+            return false
         }
-        val datum = gpt.datum();
-        val ellipsoid = datum.ellipsoid();
-        gpt.assign(ossimGpt.fromEcefPoint(prev_intersect_pt, datum));
+        val datum = gpt.datum()
+        val ellipsoid = datum.ellipsoid()
+        gpt.assign(ossimGpt.fromEcefPoint(prev_intersect_pt, datum))
         do {
-            h_ellips = getHeightAboveEllipsoid(gpt);
+            h_ellips = getHeightAboveEllipsoid(gpt)
             if (h_ellips.isNaN()) h_ellips = defaultElevValue
             intersected = ellipsoid.nearestIntersection(ray, h_ellips, new_intersect_pt)
             if (!intersected) {
@@ -1182,15 +1125,15 @@ class ossimElevManager() : ossimElevSource() {
                 gpt.makeNan()
                 done = true
             } else {
-                gpt.assign(ossimGpt.fromEcefPoint(new_intersect_pt, datum));
-                distance = (new_intersect_pt - prev_intersect_pt).magnitude();
+                gpt.assign(ossimGpt.fromEcefPoint(new_intersect_pt, datum))
+                distance = (new_intersect_pt - prev_intersect_pt).magnitude()
                 if (distance < CONVERGENCE_THRESHOLD)
-                    done = true;
+                    done = true
                 else {
-                    prev_intersect_pt.assign(new_intersect_pt);
+                    prev_intersect_pt.assign(new_intersect_pt)
                 }
             }
-            iteration_count++;
+            iteration_count++
 
         } while ((!done) && (iteration_count < MAX_NUM_ITERATIONS))
 
@@ -1207,14 +1150,14 @@ class ossimElevManager() : ossimElevSource() {
 }
 
 class ossimPolygon(
-    var theOrderingType: ossimVertexOrdering = ossimVertexOrdering.OSSIM_VERTEX_ORDER_UNKNOWN,
-    var theVertexList: Array<ossimDpt> = emptyArray(),
-    var theCurrentVertex: Int = 0
+    private var theOrderingType: ossimVertexOrdering = ossimVertexOrdering.OSSIM_VERTEX_ORDER_UNKNOWN,
+    private var theVertexList: Array<ossimDpt> = emptyArray(),
+    private var theCurrentVertex: Int = 0
 ) {
     fun resize(newsize: Int) {
         theVertexList = theVertexList.resize(newsize) { ossimDpt() }
-        theOrderingType = ossimVertexOrdering.OSSIM_VERTEX_ORDER_UNKNOWN;
-        theCurrentVertex = 0;
+        theOrderingType = ossimVertexOrdering.OSSIM_VERTEX_ORDER_UNKNOWN
+        theCurrentVertex = 0
     }
 
     operator fun set(i: Int, value: ossimDpt) {
@@ -1227,22 +1170,13 @@ class ossimPolygon(
 }
 
 data class ossimEcefVector(val theData: ossimColumnVector3d = ossimColumnVector3d()) {
-    fun magnitude(): Double {
-        return theData.magnitude()
-    }
+    fun magnitude(): Double = theData.magnitude()
 
-    operator fun times(scalar: Double): ossimEcefVector {
-        return ossimEcefVector(theData * scalar);
-    }
+    operator fun times(scalar: Double): ossimEcefVector = ossimEcefVector(theData * scalar)
 
-    fun unitVector(): ossimEcefVector {
-        return ossimEcefVector(theData / theData.magnitude());
+    fun unitVector(): ossimEcefVector = ossimEcefVector(theData / theData.magnitude())
 
-    }
-
-    fun isNan(): Boolean {
-        return theData[0].isNaN() && theData[1].isNaN() && theData[2].isNaN()
-    }
+    fun isNan(): Boolean = theData[0].isNaN() && theData[1].isNaN() && theData[2].isNaN()
 
     fun x(): Double = theData.x
     fun y(): Double = theData.y
@@ -1250,8 +1184,8 @@ data class ossimEcefVector(val theData: ossimColumnVector3d = ossimColumnVector3
 }
 
 class ossimEcefRay(
-    var theOrigin: ossimEcefPoint = ossimEcefPoint(),
-    var theDirection: ossimEcefVector = ossimEcefVector()
+    private var theOrigin: ossimEcefPoint = ossimEcefPoint(),
+    private var theDirection: ossimEcefVector = ossimEcefVector()
 ) {
     fun setOrigin(orig: ossimEcefPoint) {
         theOrigin = orig.copy()
@@ -1261,35 +1195,25 @@ class ossimEcefRay(
         theDirection = d.unitVector()
     }
 
-    fun origin(): ossimEcefPoint {
-        return theOrigin.copy()
-    }
+    fun origin(): ossimEcefPoint = theOrigin.copy()
 
-    fun hasNans(): Boolean {
-        return theOrigin.isNan() || theDirection.isNan()
-    }
+    fun hasNans(): Boolean = theOrigin.isNan() || theDirection.isNan()
 
-    fun direction(): ossimEcefVector {
-        return theDirection
-    }
+    fun direction(): ossimEcefVector = theDirection
 
-    fun extend(t: Double): ossimEcefPoint {
-        return (theOrigin + theDirection * t);
-
-
-    }
+    fun extend(t: Double): ossimEcefPoint = (theOrigin + theDirection * t)
 
     fun intersectAboveEarthEllipsoid(argHeight: Double, argDatum: ossimDatum = ossimWgs84Datum()): ossimEcefPoint {
-        val datum = argDatum;
+        val datum = argDatum
         val solution = ossimEcefPoint()
         val intersected = datum.ellipsoid().nearestIntersection(this, argHeight, solution)
         if (!intersected)
             solution.makeNan()
-        return solution;
+        return solution
     }
 }
 
-class ossimKeywordlist(val config: Map<String, String>) {
+class ossimKeywordlist(private val config: Map<String, String>) {
     fun find(prefix: String, kw: String): String? = config[prefix + kw]
     fun getBoolKeywordValue(s: String, prefix: String): Boolean {
         return false
@@ -1303,9 +1227,7 @@ class ossimKeywordlist(val config: Map<String, String>) {
         return filter
     }
 
-    fun findKey(key: String): String {
-        return config.getOrDefault(key, "")
-    }
+    fun findKey(key: String): String = config[key] ?: ""
 
     companion object {
         fun hardcodedConfig(srtmDataPath: String = "/Users/azhukov/personal/uav_pixel_to_coord/data/elevation/srtm_nasa"): ossimKeywordlist {
@@ -1328,9 +1250,7 @@ class ossimKeywordlist(val config: Map<String, String>) {
 }
 
 data class ossimIpt(val x: Int = 0, val y: Int = 0) {
-    fun hasNans(): Boolean {
-        return x == OSSIM_INT_NAN || y == OSSIM_INT_NAN
-    }
+    fun hasNans(): Boolean = x == OSSIM_INT_NAN || y == OSSIM_INT_NAN
 }
 
 class ossimApplanixEcefModel(
@@ -1351,7 +1271,7 @@ class ossimApplanixEcefModel(
     private val thePrincipalPoint = principalPoint.copy()
     private val theLensDistortion = ossimMeanRadialLensDistortion()
     private var theEcefPlatformPosition: ossimEcefPoint = ossimEcefPoint(platformPosition)
-    private var theAdjEcefPlatformPosition: ossimEcefPoint = ossimEcefPoint(platformPosition);
+    private var theAdjEcefPlatformPosition: ossimEcefPoint = ossimEcefPoint(platformPosition)
 
     private var theCompositeMatrix = SimpleMatrix.diag(0.0, 0.0, 0.0, 0.0)!!
     private var theCompositeMatrixInverse = SimpleMatrix.diag(0.0)!!
@@ -1365,7 +1285,7 @@ class ossimApplanixEcefModel(
     init {
         initAdjustableParameters()
         updateModel()
-        computeGsd();
+        computeGsd()
     }
 
     private fun computeGsd() {
@@ -1384,16 +1304,16 @@ class ossimApplanixEcefModel(
         }
 
         if (centerImagePoint.hasNans() && (!theImageSize.hasNans())) {
-            centerImagePoint.x = (theImageSize.x) / 2.0;
-            centerImagePoint.y = (theImageSize.y - 1.0) / 2.0;
+            centerImagePoint.x = (theImageSize.x) / 2.0
+            centerImagePoint.y = (theImageSize.y - 1.0) / 2.0
         } else if (centerImagePoint.hasNans() && !theImageClipRect.hasNans()) {
-            centerImagePoint = theImageClipRect.midPoint();
+            centerImagePoint = theImageClipRect.midPoint()
         }
         if (!centerImagePoint.hasNans()) {
-            val leftDpt = ossimDpt(centerImagePoint.x - quarterSize.x, centerImagePoint.y);//  (0.0,     midLine);
-            val rightDpt = ossimDpt(centerImagePoint.x + quarterSize.y, centerImagePoint.y);// (endSamp, midLine);
-            val topDpt = ossimDpt(centerImagePoint.x, centerImagePoint.y - quarterSize.y);//   (midSamp, 0.0);
-            val bottomDpt = ossimDpt(centerImagePoint.x, centerImagePoint.y + quarterSize.y);//(midSamp, endLine);
+            val leftDpt = ossimDpt(centerImagePoint.x - quarterSize.x, centerImagePoint.y)//  (0.0,     midLine)
+            val rightDpt = ossimDpt(centerImagePoint.x + quarterSize.y, centerImagePoint.y)// (endSamp, midLine)
+            val topDpt = ossimDpt(centerImagePoint.x, centerImagePoint.y - quarterSize.y)//   (midSamp, 0.0)
+            val bottomDpt = ossimDpt(centerImagePoint.x, centerImagePoint.y + quarterSize.y)//(midSamp, endLine)
             val leftGpt = ossimGpt()
             val rightGpt = ossimGpt()
             val topGpt = ossimGpt()
@@ -1403,7 +1323,7 @@ class ossimApplanixEcefModel(
             // Left point.
             // For the first point use lineSampleToWorld to get the height.
             //---
-            lineSampleToWorld(leftDpt, leftGpt);
+            lineSampleToWorld(leftDpt, leftGpt)
             if (leftGpt.hasNans()) {
                 TODO()
             }
@@ -1411,7 +1331,7 @@ class ossimApplanixEcefModel(
             // Right point:
             // Use lineSampleHeightToWorld using the left height since we want the horizontal distance.
             //---
-            lineSampleHeightToWorld(rightDpt, leftGpt.hgt, rightGpt);
+            lineSampleHeightToWorld(rightDpt, leftGpt.hgt, rightGpt)
             if (rightGpt.hasNans()) {
                 TODO()
             }
@@ -1419,7 +1339,7 @@ class ossimApplanixEcefModel(
             // Top point:
             // Use lineSampleHeightToWorld using the left height since we want the horizontal distance.
             //---
-            lineSampleHeightToWorld(topDpt, leftGpt.hgt, topGpt);
+            lineSampleHeightToWorld(topDpt, leftGpt.hgt, topGpt)
             if (topGpt.hasNans()) {
                 TODO()
             }
@@ -1427,13 +1347,13 @@ class ossimApplanixEcefModel(
             // Bottom point:
             // Use lineSampleHeightToWorld using the left height since we want the horizontal distance.
             //---
-            lineSampleHeightToWorld(bottomDpt, leftGpt.hgt, bottomGpt);
+            lineSampleHeightToWorld(bottomDpt, leftGpt.hgt, bottomGpt)
             if (bottomGpt.hasNans()) {
                 TODO()
             }
-            theGSD.x = leftGpt.distanceTo(rightGpt) / (rightDpt.x - leftDpt.x);
-            theGSD.y = topGpt.distanceTo(bottomGpt) / (bottomDpt.y - topDpt.y);
-            theMeanGSD = (theGSD.x + theGSD.y) / 2.0;
+            theGSD.x = leftGpt.distanceTo(rightGpt) / (rightDpt.x - leftDpt.x)
+            theGSD.y = topGpt.distanceTo(bottomGpt) / (bottomDpt.y - topDpt.y)
+            theMeanGSD = (theGSD.x + theGSD.y) / 2.0
         } else {
             TODO()
         }
@@ -1441,10 +1361,9 @@ class ossimApplanixEcefModel(
 
     private fun lineSampleHeightToWorld(image_point: ossimDpt, heightEllipsoid: Double, worldPoint: ossimGpt) {
         val ray = ossimEcefRay()
-        imagingRay(image_point, ray);
-        val Pecf = ossimEcefPoint(ray.intersectAboveEarthEllipsoid(heightEllipsoid));
-        worldPoint.assign(ossimGpt.fromEcefPoint(Pecf));
-
+        imagingRay(image_point, ray)
+        val Pecf = ossimEcefPoint(ray.intersectAboveEarthEllipsoid(heightEllipsoid))
+        worldPoint.assign(ossimGpt.fromEcefPoint(Pecf))
     }
 
     private fun updateModel() {
@@ -1454,17 +1373,17 @@ class ossimApplanixEcefModel(
         val degreePerMeter = 1.0 / metersPerDegree
         val latShift: Double = -computeParameterOffset(1) * theMeanGSD * degreePerMeter
         val lonShift: Double = computeParameterOffset(0) * theMeanGSD * degreePerMeter
-        gpt = ossimGpt.fromEcefPoint(theEcefPlatformPosition);
+        gpt = ossimGpt.fromEcefPoint(theEcefPlatformPosition)
         val height = gpt.height()
-        gpt.height(height + computeParameterOffset(5));
-        gpt.latd(gpt.latd() + latShift);
-        gpt.lond(gpt.lond() + lonShift);
-        theAdjEcefPlatformPosition = ossimEcefPoint(gpt);
+        gpt.height(height + computeParameterOffset(5))
+        gpt.latd(gpt.latd() + latShift)
+        gpt.lond(gpt.lond() + lonShift)
+        theAdjEcefPlatformPosition = ossimEcefPoint(gpt)
         val lsrSpace =
-            ossimLsrSpace(ossimGpt.fromEcefPoint(theAdjEcefPlatformPosition), theHeading + computeParameterOffset(4));
+            ossimLsrSpace(ossimGpt.fromEcefPoint(theAdjEcefPlatformPosition), theHeading + computeParameterOffset(4))
 
-        // make a left handed roational matrix;
-        val lsrMatrix = ossimMatrix4x4(lsrSpace.lsrToEcefRotMatrix());
+        // make a left handed roational matrix
+        val lsrMatrix = ossimMatrix4x4(lsrSpace.lsrToEcefRotMatrix())
         val rotx = ossimMatrix4x4.createRotationXMatrix(
             thePitch + computeParameterOffset(3),
             ossimCoordSysOrientMode.OSSIM_LEFT_HANDED
@@ -1475,36 +1394,36 @@ class ossimApplanixEcefModel(
         val orientation = rotx * roty
 
         theCompositeMatrix = lsrMatrix.getData() * orientation
-        theCompositeMatrixInverse = theCompositeMatrix.i();
-        theBoundGndPolygon.resize(4);
+        theCompositeMatrixInverse = theCompositeMatrix.i()
+        theBoundGndPolygon.resize(4)
 
-        theExtrapolateImageFlag = false;
-        theExtrapolateGroundFlag = false;
+        theExtrapolateImageFlag = false
+        theExtrapolateGroundFlag = false
 
-        lineSampleToWorld(theImageClipRect.ul(), gpt);//+ossimDpt(-w, -h), gpt);
-        theBoundGndPolygon[0] = gpt;
-        lineSampleToWorld(theImageClipRect.ur(), gpt);//+ossimDpt(w, -h), gpt);
-        theBoundGndPolygon[1] = gpt;
-        lineSampleToWorld(theImageClipRect.lr(), gpt);//+ossimDpt(w, h), gpt);
-        theBoundGndPolygon[2] = gpt;
-        lineSampleToWorld(theImageClipRect.ll(), gpt);//+ossimDpt(-w, h), gpt);
-        theBoundGndPolygon[3] = gpt;
+        lineSampleToWorld(theImageClipRect.ul(), gpt)//+ossimDpt(-w, -h), gpt)
+        theBoundGndPolygon[0] = gpt
+        lineSampleToWorld(theImageClipRect.ur(), gpt)//+ossimDpt(w, -h), gpt)
+        theBoundGndPolygon[1] = gpt
+        lineSampleToWorld(theImageClipRect.lr(), gpt)//+ossimDpt(w, h), gpt)
+        theBoundGndPolygon[2] = gpt
+        lineSampleToWorld(theImageClipRect.ll(), gpt)//+ossimDpt(-w, h), gpt)
+        theBoundGndPolygon[3] = gpt
     }
 
     fun lineSampleToWorld(image_point: ossimDpt, gpt: ossimGpt) {
         if (image_point.hasNans()) {
-            gpt.makeNan();
+            gpt.makeNan()
         } else {
             val ray = ossimEcefRay()
-            imagingRay(image_point, ray);
+            imagingRay(image_point, ray)
             elevationManager.intersectRay(ray, gpt)
         }
     }
 
     private fun imagingRay(image_point: ossimDpt, image_ray: ossimEcefRay) {
         val f1 = image_point - theRefImgPt
-        f1.x *= thePixelSize.x;
-        f1.y *= -thePixelSize.y;
+        f1.x *= thePixelSize.x
+        f1.y *= -thePixelSize.y
         val film = f1 - thePrincipalPoint
         if (theLensDistortion.valid()) {
 //            var filmOut: ossimDpt
@@ -1515,11 +1434,11 @@ class ossimApplanixEcefModel(
             film.x,
             film.y,
             -theFocalLength
-        );
-        var ecf_ray_dir = ossimEcefVector(theCompositeMatrix * cam_ray_dir);
-        ecf_ray_dir = ecf_ray_dir * (1.0 / ecf_ray_dir.magnitude());
-        image_ray.setOrigin(theAdjEcefPlatformPosition);
-        image_ray.setDirection(ecf_ray_dir);
+        )
+        var ecf_ray_dir = ossimEcefVector(theCompositeMatrix * cam_ray_dir)
+        ecf_ray_dir = ecf_ray_dir * (1.0 / ecf_ray_dir.magnitude())
+        image_ray.setOrigin(theAdjEcefPlatformPosition)
+        image_ray.setDirection(ecf_ray_dir)
     }
 
     private fun computeParameterOffset(i: Int): Double {
@@ -1527,39 +1446,39 @@ class ossimApplanixEcefModel(
     }
 
     private fun initAdjustableParameters() {
-        resizeAdjustableParameterArray(6);
+        resizeAdjustableParameterArray(6)
 
-        setAdjustableParameter(0, 0.0);
-        setParameterDescription(0, "x_offset");
-        setParameterUnit(0, "pixels");
+        setAdjustableParameter(0, 0.0)
+        setParameterDescription(0, "x_offset")
+        setParameterUnit(0, "pixels")
 
-        setAdjustableParameter(1, 0.0);
-        setParameterDescription(1, "y_offset");
-        setParameterUnit(1, "pixels");
+        setAdjustableParameter(1, 0.0)
+        setParameterDescription(1, "y_offset")
+        setParameterUnit(1, "pixels")
 
-        setAdjustableParameter(2, 0.0);
-        setParameterDescription(2, "roll");
-        setParameterUnit(2, "degrees");
+        setAdjustableParameter(2, 0.0)
+        setParameterDescription(2, "roll")
+        setParameterUnit(2, "degrees")
 
-        setAdjustableParameter(3, 0.0);
-        setParameterDescription(3, "pitch");
-        setParameterUnit(3, "degrees");
+        setAdjustableParameter(3, 0.0)
+        setParameterDescription(3, "pitch")
+        setParameterUnit(3, "degrees")
 
-        setAdjustableParameter(4, 0.0);
-        setParameterDescription(4, "heading");
-        setParameterUnit(4, "degrees");
+        setAdjustableParameter(4, 0.0)
+        setParameterDescription(4, "heading")
+        setParameterUnit(4, "degrees")
 
-        setAdjustableParameter(5, 0.0);
-        setParameterDescription(5, "altitude");
-        setParameterUnit(5, "meters");
+        setAdjustableParameter(5, 0.0)
+        setParameterDescription(5, "altitude")
+        setParameterUnit(5, "meters")
 
 
-        setParameterSigma(0, 20.0);
-        setParameterSigma(1, 20.0);
-        setParameterSigma(2, .1);
-        setParameterSigma(3, .1);
-        setParameterSigma(4, .1);
-        setParameterSigma(5, 50.0);
+        setParameterSigma(0, 20.0)
+        setParameterSigma(1, 20.0)
+        setParameterSigma(2, .1)
+        setParameterSigma(3, .1)
+        setParameterSigma(4, .1)
+        setParameterSigma(5, 50.0)
     }
 
     private fun setParameterSigma(i: Int, d: Double) {
