@@ -149,8 +149,11 @@ class SrtmElevationFile(
 
         fun loadHgt(file: File): SrtmElevationFile {
             val bytes = file.inputStream().channel.map(FileChannel.MapMode.READ_ONLY, 0, file.length())
-//            val bytes = file.readBytes()
-            val matchResult = regex.matchEntire(file.name)!!
+            return fromFilenameAndBytes(file.name, bytes)
+        }
+
+        fun fromFilenameAndBytes(filename: String, bytes: ByteBuffer): SrtmElevationFile {
+            val matchResult = regex.matchEntire(filename)!!
             val ns = matchResult.groupValues[1]
             val latstr = matchResult.groupValues[2]
             val ew = matchResult.groupValues[3]
