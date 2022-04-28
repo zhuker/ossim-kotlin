@@ -613,7 +613,7 @@ data class ossimEcefPoint(var theData: ossimColumnVector3d = ossimColumnVector3d
             )
 
         } else {
-            TODO("not implemented")
+            TODO("not implemented gpt.isHgtNan")
         }
     }
 
@@ -812,7 +812,7 @@ class ossimGeoidManager {
         if (value == "identity") {
             return theIdentityGeoid.copy()
         }
-        TODO("Not yet implemented")
+        TODO("Not yet implemented findGeoidByShortName")
     }
 
     companion object {
@@ -926,7 +926,7 @@ abstract class ossimElevationCellDatabase : ossimElevationDatabase() {
             val handler = getOrCreateCellHandler(gpt)
             return handler?.getHeightAboveMSL(gpt) ?: Double.NaN // still need to shift
         }
-        TODO("Not yet implemented")
+        TODO("Not yet implemented getHeightAboveMSL")
     }
 
     abstract fun createId(pt: ossimGpt): ULong
@@ -955,14 +955,14 @@ class ossimElevationDatabaseFactory {
             return result
         }
 
-        TODO("Not yet implemented")
+        TODO("Not yet implemented createDatabase")
     }
 
     private fun createDatabase(typeName: String): ossimElevationDatabase {
         if (typeName == "srtm" || typeName == "srtm_directory") {
             return ossimSrtmElevationDatabase()
         }
-        TODO("Not yet implemented")
+        TODO("Not yet implemented createDatabase $typeName")
     }
 
     companion object {
@@ -1081,9 +1081,9 @@ class ossimElevManager() : ossimElevSource() {
             // No elevation value was returned from the database, so try next best alternatives depending
             // on ossim_preferences settings. Priority goes to default ellipsoid height if available:
             if (!m_defaultHeightAboveEllipsoid.isNaN()) {
-                TODO()
+                TODO("!m_defaultHeightAboveEllipsoid.isNaN")
             } else if (m_useGeoidIfNullFlag) {
-                TODO()
+                TODO("m_useGeoidIfNullFlag == true")
             }
         }
         // Next, ossim_preferences may have indicated an elevation offset to use (top of trees, error
@@ -1325,7 +1325,7 @@ class ossimApplanixEcefModel(
             //---
             lineSampleToWorld(leftDpt, leftGpt)
             if (leftGpt.hasNans()) {
-                TODO()
+                TODO("leftGpt.hasNans")
             }
             //---
             // Right point:
@@ -1333,7 +1333,7 @@ class ossimApplanixEcefModel(
             //---
             lineSampleHeightToWorld(rightDpt, leftGpt.hgt, rightGpt)
             if (rightGpt.hasNans()) {
-                TODO()
+                TODO("rightGpt.hasNans")
             }
             //---
             // Top point:
@@ -1341,7 +1341,7 @@ class ossimApplanixEcefModel(
             //---
             lineSampleHeightToWorld(topDpt, leftGpt.hgt, topGpt)
             if (topGpt.hasNans()) {
-                TODO()
+                TODO("topGpt.hasNans")
             }
             //---
             // Bottom point:
@@ -1349,13 +1349,13 @@ class ossimApplanixEcefModel(
             //---
             lineSampleHeightToWorld(bottomDpt, leftGpt.hgt, bottomGpt)
             if (bottomGpt.hasNans()) {
-                TODO()
+                TODO("bottomGpt.hasNans")
             }
             theGSD.x = leftGpt.distanceTo(rightGpt) / (rightDpt.x - leftDpt.x)
             theGSD.y = topGpt.distanceTo(bottomGpt) / (bottomDpt.y - topDpt.y)
             theMeanGSD = (theGSD.x + theGSD.y) / 2.0
         } else {
-            TODO()
+            TODO("centerImagePoint.hasNans()")
         }
     }
 
