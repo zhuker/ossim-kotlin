@@ -73,7 +73,7 @@ class ApplanixTest {
         val KWL = ossimKeywordlist.hardcodedConfig(File("testdata").absolutePath)
         ossimElevManager.instance().loadState(KWL, "elevation_manager.")
 
-        val res = findTarget(makeParams(37.2490921080559, -121.95113440773974))
+        val (res, _) = findTarget(makeParams(37.2490921080559, -121.95113440773974))
         println(res)
         assertEquals(37.251320410557689, res.lat, 0.0000000000001)
         assertEquals(-121.94733956444934, res.lon, 0.0000000000001)
@@ -86,7 +86,7 @@ class ApplanixTest {
         val KWL = ossimKeywordlist.hardcodedConfig(File("testdata").absolutePath)
         ossimElevManager.instance().loadState(KWL, "elevation_manager.")
 
-        val res = findTarget(makeParams(37.2490921080559, -122.087915))
+        val (res, _) = findTarget(makeParams(37.2490921080559, -122.087915))
         println(res)
         assertEquals(37.233936863641851, res.lat, 0.0000000000001)
         assertEquals(-122.113713241769318, res.lon, 0.0000000000001)
@@ -114,7 +114,7 @@ class ApplanixTest {
         }
         val mgr = ossimElevManager(listOf(customDb))
 
-        val res = findTarget(makeParams(37.2490921080559, -122.087915), mgr)
+        val (res, _) = findTarget(makeParams(37.2490921080559, -122.087915), mgr)
         assertTrue(customDbCalled)
         println(res)
         assertEquals(37.233936863641851, res.lat, 0.0000000000001)

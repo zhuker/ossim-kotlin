@@ -1094,7 +1094,7 @@ class ossimElevManager() : ossimElevSource() {
         return result
     }
 
-    fun intersectRay(ray: ossimEcefRay, gpt: ossimGpt, defaultElevValue: Double = 0.0): Boolean {
+    fun intersectRay(ray: ossimEcefRay, gpt: ossimGpt, defaultElevValue: Double = 0.0): Pair<Boolean, Boolean> {
 
         val CONVERGENCE_THRESHOLD = 0.001 // meters
         val MAX_NUM_ITERATIONS = 50
@@ -1108,7 +1108,7 @@ class ossimElevManager() : ossimElevSource() {
         var iteration_count = 0
         if (ray.hasNans()) {
             gpt.makeNan()
-            return false
+            return intersected to done
         }
         val datum = gpt.datum()
         val ellipsoid = datum.ellipsoid()
@@ -1137,7 +1137,7 @@ class ossimElevManager() : ossimElevSource() {
 
         } while ((!done) && (iteration_count < MAX_NUM_ITERATIONS))
 
-        return intersected
+        return intersected to done
     }
 
     companion object {
@@ -1410,13 +1410,14 @@ class ossimApplanixEcefModel(
         theBoundGndPolygon[3] = gpt
     }
 
-    fun lineSampleToWorld(image_point: ossimDpt, gpt: ossimGpt) {
+    fun lineSampleToWorld(image_point: ossimDpt, gpt: ossimGpt): Pair<Boolean, Boolean> {
         if (image_point.hasNans()) {
             gpt.makeNan()
+            return false to false
         } else {
             val ray = ossimEcefRay()
             imagingRay(image_point, ray)
-            elevationManager.intersectRay(ray, gpt)
+            return elevationManager.intersectRay(ray, gpt)
         }
     }
 

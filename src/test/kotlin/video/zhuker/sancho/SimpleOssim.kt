@@ -18,6 +18,10 @@ data class Params(
     val v: Double
 )
 
+object EmptyElevationDb : ossimElevationDatabase() {
+    override fun getHeightAboveMSL(gpt: ossimGpt): Double = 0.0
+}
+
 object SimpleOssim {
     fun makeParams(lat: Double, lon: Double): Params {
         val params = Params(
@@ -40,7 +44,7 @@ object SimpleOssim {
         return params
     }
 
-    fun findTarget(params: Params, elevManager: ossimElevManager? = null): ossimGpt {
+    fun findTarget(params: Params, elevManager: ossimElevManager? = null): Pair<ossimGpt, Boolean> {
         val model = ossimApplanixEcefModel(
             ossimDrect(ossimDpt(0.0, 0.0), ossimDpt(params.img_width.toDouble(), params.img_height.toDouble())),
             ossimGpt(params.latitude, params.longitude, params.elevation),
@@ -54,8 +58,19 @@ object SimpleOssim {
         )
         model.setPrincipalPoint(ossimDpt(params.px, params.py))
         val res = ossimGpt()
-        model.lineSampleToWorld(ossimDpt(params.u, params.v), res)
-        return res
+        val (_, done) = model.lineSampleToWorld(ossimDpt(params.u, params.v), res)
+        return res to done
+    }
+
+    fun findTargetOnFlatWorld(params: Params): Pair<ossimGpt, Boolean> {
+        return findTarget(params, ossimElevManager(listOf(EmptyElevationDb)))
+    }
+
+    fun findTargetFused(params: Params, elevManager: ossimElevManager): ossimGpt {
+        val (target, done) = findTarget(params, elevManager)
+        if (done) return target
+        //sometimes target can not be found because of hilly terrain
+        return findTarget(params, ossimElevManager(listOf(EmptyElevationDb))).first
     }
 
 }
